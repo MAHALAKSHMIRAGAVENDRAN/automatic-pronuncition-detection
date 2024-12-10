@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech Recognition</title>
+    <style>
+        body {
+            min-height: 100vh;
+            width: 100%;
+            background-image: linear-gradient(rgba(4,9,30,0.7),rgba(4,9,30,0.7)),url(images/giphy.gif);
+            background-position: center;
+            background-size: cover;
+            position: relative;
+            font-family: Arial, sans-serif;
+            animation: backgroundAnimation 20s infinite alternate;
+        }
+        nav {
+            display: flex;
+            padding: 2% 6%;
+            justify-content: space-between;
+            align-items: center;
+        }
+        nav img {
+            width: 150px;
+        }
+        .nav-links {
+            flex: 1;
+            text-align: right;
+        }
+        .nav-links ul li {
+            list-style: none;
+            display: inline-block;
+            padding: 8px 12px;
+            position: relative;
+        }
+        .nav-links ul li a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 17px;
+        }
+        .nav-links ul li::after {
+            content: '';
+            width: 0%;
+            height: 2px;
+            background: #f44336;
+            display: block;
+            margin: auto;
+            transition: 0.5s;
+        }
+        .nav-links ul li:hover::after {
+            width: 100%;
+        }
+        @keyframes backgroundAnimation {
+            0% {
+                background-color: #f0f0f0;
+            }
+            50% {
+                background-color: #d3d3d3;
+            }
+            100% {
+                background-color: #f0f0f0;
+            }
+        }
+        h1, p {
+            text-align: center;
+            color: #f0f0f0;
+        }
+        button {
+            margin: 20px auto;
+            display: block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            margin: 0 auto;
+            max-width: 600px;
+            padding: 20px;
+            background-color: #000000;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        .pronunciation {
+            font-style: italic;
+            color: #f0f0f0;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+<section class="header">
+    <nav>
+        <a href="index.html"><img src="images/logo.png" alt="Logo"></a>
+        <div class="nav-links" id="navLinks">
+            <i class="fa fa-times" onclick="hideMenu()"></i>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="p.html">Login</a></li>
+                <li><a href="mp4.html">Service</a></li>
+            </ul>
+        </div>
+        <i class="fa fa-bars" onclick="showMenu()"></i>
+    </nav>
+</section>
+<h1>Speech Recognition</h1>
+<p>Click the button and start speaking.</p>
+<button onclick="startRecognition()">Start Recognition</button>
+<div id="output"></div>
+
+<script>
+    function startRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            document.getElementById('output').innerHTML += `<p>Speech recognition not supported in this browser.</p>`;
+            return;
+        }
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US'; // Set language
+        recognition.interimResults = false; // Use final results only
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            const confidence = event.results[0][0].confidence;
+            document.getElementById('output').innerHTML += `<p>Transcript: ${transcript} (Confidence: ${confidence.toFixed(2)})</p>`;
+            
+            // Speak the transcript
+            speak(transcript);
+            
+            // Fetch and display all available pronunciations
+            fetchPronunciations(transcript);
+        };
+
+        recognition.onerror = function(event) {
+            document.getElementById('output').innerHTML += `<p>Error occurred: ${event.error}</p>`;
+        };
+
+        recognition.onend = function() {
+            document.getElementById('output').innerHTML += `<p>Recognition ended</p>`;
+        };
+
+        recognition.start();
+    }
+
+    // Function to speak the transcript
+    function speak(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // Function to fetch and display all available pronunciations
+    function fetchPronunciations(text) {
+        const apiUrl = `https://api.dictionaryapi.dev/api/v2/entries/en_US/${text}`;
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.length > 0) {
+                    const pronunciations = data.flatMap(entry => entry.phonetics.map(phonetic => phonetic.text));
+                    const pronunciationHTML = pronunciations.map(pronunciation => `<p class="pronunciation">Pronunciation: ${pronunciation}</p>`).join('');
+                    appendToOutput(pronunciationHTML);
+                } else {
+                    appendToOutput(`<p>No pronunciation available</p>`);
+                }
+            })
+            .catch(error => {
+                appendToOutput(`<p>Error fetching pronunciation: ${error.message}</p>`);
+            });
+    }
+
+    // Helper function to append HTML to the output
+    function appendToOutput(html) {
+        const outputDiv = document.getElementById('output');
+        outputDiv.innerHTML += html;
+    }
+
+    function showMenu() {
+        document.getElementById("navLinks").style.display = "block";
+    }
+
+    function hideMenu() {
+        document.getElementById("navLinks").style.display = "none";
+    }
+</script>
+</body>
+</html>
